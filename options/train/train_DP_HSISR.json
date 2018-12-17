@@ -1,0 +1,50 @@
+{
+  "name": "DP_HSISR_x32",
+  "model": "fusion_model",
+  "scale": 32,
+  "gpu_ids": [0],
+
+  "dataset_opt": {
+    "train_set": {
+      "name": "NTIRE2018",
+      "mode": "fusion",
+      "path": "./datasets/NTIRE2018/NTIRE2018_Train1_Spectral_sub.h5",
+      "use_shuffle": true,
+      "n_workers": 0,
+      "batch_size": 16,
+      "im_size": 64,
+      "use_flip": true,
+      "use_rotate": true
+    },
+    "val_set": {
+      "name": "CAVE",
+      "mode": "fusion",
+      "path": "./datasets/CAVE/CAVE_sub.h5"
+    }
+  },
+
+  "train_opt": {
+    "optimizer": "SGD",
+    "lr": 1e-4,
+    "lr_scheme": "MultiStepLR",
+    "lr_step": [5e4, 1e5, 1.5e5, 2e5],
+    "lr_gamma": 0.5,
+    "weight_decay": 0,
+    "criterion": "l1",
+    "val_freq": 1e3,
+    "manual_seed": 0,
+    "max_iter": 2.5e5
+  },
+
+  "network_opt": {
+    "net_name": "DPHSISR",
+    "in_c": 31,
+    "out_c": 31,
+    "nf": 64
+  },
+
+  "log_opt": {
+    "print_frq": 1e-2,
+    "save_ckpt_frq": 1e3
+  }
+}

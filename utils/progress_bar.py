@@ -4,9 +4,9 @@ import time
 
 
 class ProgressBar(object):
-    '''A progress bar which can print the progress
+    """A progress bar which can print the progress
     modified from https://github.com/hellock/cvbase/blob/master/cvbase/progress.py
-    '''
+    """
 
     def __init__(self, task_num=0, bar_width=50, start=True):
         self.task_num = task_num

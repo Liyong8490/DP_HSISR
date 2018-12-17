@@ -3,7 +3,6 @@ import sys
 from utils.util import get_timestamp
 
 
-# A progress bar which can print the progress
 # modified from https://github.com/xinntao/BasicSR/blob/master/codes/utils/logger.py
 
 # print to file and std_out simultaneously

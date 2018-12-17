@@ -4,9 +4,11 @@
 import os
 import sys
 import cv2
+import shutil
 import numpy as np
 import argparse
 import h5py
+import random
 import scipy.io as sio
 from multiprocessing import Pool
 from utils.progress_bar import ProgressBar
@@ -14,14 +16,18 @@ from utils.progress_bar import ProgressBar
 
 def main():
     parser = argparse.ArgumentParser('Extract sub images from Hyperspectral images.')
-    parser.add_argument('-p', '--path', type=str, default='E:/HSI/CAVE/CAVE/')
-    parser.add_argument('-o', '--out-path', type=str, default='')
+    parser.add_argument('--path1', type=str, default='E:/HSI/CAVE/CAVE/')
+    parser.add_argument('--path2', type=str, default='E:/HSI/Harvard/Harvard/')
+    parser.add_argument('--path3', type=str, default='E:/HSI/NTIRE2018/NTIRE2018_Train1_Spectral/')
+    parser.add_argument('-o', '--out-path', type=str, default='E:/HSI/HSI_MIX/')
     parser.add_argument('-t', '--threads', type=int, default=1)
     parser.add_argument('-c', '--crop-size', type=int, default=256)
     parser.add_argument('-s', '--stride', type=int, default=96)
 
     opt = parser.parse_args()
-    in_path = opt.path
+    in_path1 = opt.path1
+    in_path2 = opt.path2
+    in_path3 = opt.path3
     out_path = opt.out_path
     n_threads = opt.threads
     crop_sz = opt.crop_size
@@ -29,40 +35,53 @@ def main():
     thres_sz = 30  #
     compression_level = 3
 
-    if out_path == '':
-        dataset_name = in_path.split('/')[-2].split('\\')[-1]
-        if in_path[-1] == '/':
-            out_path = in_path.replace(dataset_name + '/', dataset_name + '_sub.h5')
-        else:
-            out_path = in_path.replace(dataset_name, dataset_name + '_sub.h5')
-
-    # if not os.path.exists(out_path):
-    #     os.makedirs(out_path)
-    #     print('mkdir [{:s}] ...'.format(out_path))
-    # else:
-    #     print('[*] Folder [{:s}] already exists.'.format(out_path))
-    #     # return
+    if not os.path.exists(out_path):
+        os.makedirs(out_path)
 
     img_list = []
-    for root, _, file_list in sorted(os.walk(in_path)):
+    for root, _, file_list in sorted(os.walk(in_path1)):
         path = [os.path.join(root, x) for x in file_list]
         img_list.extend(path)
+    for root, _, file_list in sorted(os.walk(in_path2)):
+        path = [os.path.join(root, x) for x in file_list]
+        img_list.extend(path)
+    for root, _, file_list in sorted(os.walk(in_path3)):
+        path = [os.path.join(root, x) for x in file_list]
+        img_list.extend(path)
+
+    l = len(img_list)
+    train_ids = list(set([random.randrange(l) for _ in range(l)]))
+    train_ids.sort()
+    val_ids = [idx for idx in range(l) if idx not in train_ids]
+    val_ids.sort()
+    train_files = [img_list[idx] for idx in train_ids]
+    val_files = [img_list[idx] for idx in val_ids]
+    sio.savemat(os.path.join(out_path, 'filenames.mat'),
+                {'train_files': train_files,
+                 'val_files': val_files})
 
     def update(arg):
         pbar.update(arg)
 
-    pbar = ProgressBar(len(img_list))
+    pbar = ProgressBar(len(train_files))
 
     pool = Pool(n_threads)
-    for path in img_list:
+    for path in train_files:
         pool.apply_async(
             worker,
-            args=(path, out_path, crop_sz, stride, thres_sz, compression_level),
+            args=(path, os.path.join(out_path, 'train.h5'), crop_sz, stride, thres_sz, compression_level),
             callback=update
         )
     pool.close()
     pool.join()
     print("-----------Generation Finish-------------")
+
+    val_path = os.path.join(out_path, 'val')
+    if not os.path.exists(val_path):
+        os.makedirs(val_path)
+    for path in val_files:
+        shutil.copy2(path, val_path)
+    print("-----------Copy Val-files Finish-------------")
 
 
 def worker(path, save_folder, crop_sz, stride, thres_sz, compression_level):
